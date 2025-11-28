@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NutriSmart AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981">
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f3f4f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Markdown style simulation for AI response */
+        .prose h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; color: #065f46; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose li { margin-bottom: 0.25rem; }
+        .prose p { margin-bottom: 0.5rem; }
+        .prose strong { color: #047857; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-20">
+
+    <!-- Header -->
+    <header class="bg-emerald-600 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fas fa-leaf mr-2"></i>NutriSmart AI</h1>
+            <div id="user-calories" class="text-xs bg-emerald-700 px-2 py-1 rounded hidden">TDEE: <span>0</span> kcal</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 max-w-md">
+        
+        <!-- Tab 1: Calcolatore -->
+        <div id="tab-calculator" class="tab-content active">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Calcola Fabbisogno</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sesso</label>
+                        <div class="flex space-x-4 mt-1">
+                            <label class="flex items-center space-x-2 border p-3 rounded-lg w-1/2 justify-center cursor-pointer has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                                <input type="radio" name="gender" value="male" class="hidden" checked>
+                                <i class="fas fa-mars text-blue-500"></i> <span>Uomo</span>
+                            </label>
+                            <label class="flex items-center space-x-2 border p-3 rounded-lg w-1/2 justify-center cursor-pointer has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                                <input type="radio" name="gender" value="female" class="hidden">
+                                <i class="fas fa-venus text-pink-500"></i> <span>Donna</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Età</label>
+                            <input type="number" id="age" class="w-full mt-1 p-3 border rounded-lg focus:ring-emerald-500 focus:border-emerald-500" placeholder="Anni">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Peso (kg)</label>
+                            <input type="number" id="weight" class="w-full mt-1 p-3 border rounded-lg focus:ring-emerald-500 focus:border-emerald-500" placeholder="kg">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Altezza (cm)</label>
+                        <input type="number" id="height" class="w-full mt-1 p-3 border rounded-lg focus:ring-emerald-500 focus:border-emerald-500" placeholder="cm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Attività Fisica</label>
+                        <select id="activity" class="w-full mt-1 p-3 border rounded-lg bg-white">
+                            <option value="1.2">Sedentario (Ufficio, poco moto)</option>
+                            <option value="1.375">Leggera (Sport 1-3 gg/sett)</option>
+                            <option value="1.55">Moderata (Sport 3-5 gg/sett)</option>
+                            <option value="1.725">Intensa (Sport 6-7 gg/sett)</option>
+                        </select>
+                    </div>
+
+                    <button onclick="calculateCalories()" class="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-emerald-700 transition transform active:scale-95">
+                        Calcola TDEE
+                    </button>
+                </div>
+            </div>
+
+            <div id="result-card" class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 hidden animate-fade-in">
+                <h3 class="text-center text-gray-600 font-medium">Il tuo fabbisogno giornaliero</h3>
+                <p class="text-center text-4xl font-bold text-emerald-700 my-2"><span id="tdee-value">0</span> <span class="text-lg">kcal</span></p>
+                <p class="text-center text-xs text-gray-500">Usa questo valore per generare il piano alimentare.</p>
+            </div>
+        </div>
+
+        <!-- Tab 2: AI Scanner -->
+        <div id="tab-scan" class="tab-content">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Analisi Piatto AI</h2>
+                <p class="text-sm text-gray-500 mb-4">Scatta una foto al tuo pasto. L'IA identificherà gli ingredienti e stimerà i macro.</p>
+
+                <div class="border-2 border-dashed border-gray-300 rounded-xl h-48 flex flex-col justify-center items-center bg-gray-50 relative overflow-hidden" id="drop-area">
+                    <input type="file" id="file-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="preview-container" class="hidden w-full h-full absolute top-0 left-0">
+                        <img id="image-preview" class="w-full h-full object-cover">
+                    </div>
+                    <div id="upload-placeholder" class="text-center">
+                        <i class="fas fa-camera text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-500 text-sm">Tocca per scattare o caricare</p>
+                    </div>
+                </div>
+
+                <button onclick="analyzeImage()" class="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition flex justify-center items-center disabled:opacity-50" id="analyze-btn">
+                    <span id="analyze-text">Analizza con AI</span>
+                    <div id="analyze-loader" class="loader ml-2 hidden" style="width: 20px; height: 20px; border-width: 2px;"></div>
+                </button>
+
+                <div id="image-result" class="mt-6 prose text-sm text-gray-700 hidden bg-blue-50 p-4 rounded-lg border border-blue-100"></div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Piano Alimentare -->
+        <div id="tab-plan" class="tab-content">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Piano Alimentare</h2>
+                <p class="text-sm text-gray-500 mb-4">Genera un piano basato sul tuo fabbisogno calorico.</p>
+
+                <div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg mb-4">
+                    <span class="text-gray-600 text-sm">Target Calorico:</span>
+                    <input type="number" id="plan-calories" class="bg-white border w-24 p-1 rounded text-center" placeholder="2000">
+                </div>
+                
+                <div class="mb-4">
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Obiettivo</label>
+                     <select id="diet-goal" class="w-full p-2 border rounded-lg text-sm bg-white">
+                         <option value="Perdere peso">Dimagrimento</option>
+                         <option value="Mantenimento">Mantenimento</option>
+                         <option value="Aumentare massa">Massa Muscolare</option>
+                     </select>
+                </div>
+
+                <button onclick="generatePlan()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-purple-700 transition flex justify-center items-center">
+                    <span id="plan-text">Genera Piano</span>
+                    <div id="plan-loader" class="loader ml-2 hidden" style="width: 20px; height: 20px; border-width: 2px; border-top-color: white;"></div>
+                </button>
+
+                <div id="plan-result" class="mt-6 prose text-sm text-gray-700 hidden bg-purple-50 p-4 rounded-lg border border-purple-100"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around py-3 pb-safe z-50">
+        <button onclick="switchTab('tab-calculator')" class="nav-btn text-emerald-600 flex flex-col items-center w-full active">
+            <i class="fas fa-calculator text-xl mb-1"></i>
+            <span class="text-xs">Calcola</span>
+        </button>
+        <button onclick="switchTab('tab-scan')" class="nav-btn text-gray-400 flex flex-col items-center w-full">
+            <i class="fas fa-camera text-xl mb-1"></i>
+            <span class="text-xs">Scanner</span>
+        </button>
+        <button onclick="switchTab('tab-plan')" class="nav-btn text-gray-400 flex flex-col items-center w-full">
+            <i class="fas fa-utensils text-xl mb-1"></i>
+            <span class="text-xs">Dieta</span>
+        </button>
+    </nav>
+
+    <script>
+        // CONFIGURAZIONE API
+        // IMPORTANTE: Nell'ambiente di anteprima, apiKey deve essere una stringa vuota per usare il proxy interno.
+        // Se esporti questo file, sostituisci la stringa vuota con la tua chiave: "AIzaSyBUCt5aewnRIPAh5VwdUPBk_YccYSSvTl0"
+        const apiKey = ""; 
+        
+        let currentTDEE = 0;
+        let selectedFileBase64 = null;
+
+        // Inizializza PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('SW registrato', reg))
+                    .catch(err => console.log('SW fallito', err));
+            });
+        }
+
+        // Navigazione Tabs
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('text-emerald-600');
+                el.classList.add('text-gray-400');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            // Highlight current button logic (simple mapping)
+            const index = ['tab-calculator', 'tab-scan', 'tab-plan'].indexOf(tabId);
+            const buttons = document.querySelectorAll('.nav-btn');
+            if(buttons[index]) {
+                buttons[index].classList.remove('text-gray-400');
+                buttons[index].classList.add('text-emerald-600');
+            }
+        }
+
+        // Logica Calcolatore
+        function calculateCalories() {
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+            const age = parseFloat(document.getElementById('age').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const activity = parseFloat(document.getElementById('activity').value);
+
+            if (!age || !weight || !height) {
+                alert("Per favore compila tutti i campi!");
+                return;
+            }
+
+            // Mifflin-St Jeor Equation
+            let bmr;
+            if (gender === 'male') {
+                bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+            } else {
+                bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+            }
+
+            currentTDEE = Math.round(bmr * activity);
+
+            // Update UI
+            document.getElementById('tdee-value').innerText = currentTDEE;
+            document.getElementById('result-card').classList.remove('hidden');
+            
+            // Update Mini Header & Plan Input
+            document.getElementById('user-calories').classList.remove('hidden');
+            document.getElementById('user-calories').innerHTML = `TDEE: <b>${currentTDEE}</b> kcal`;
+            document.getElementById('plan-calories').value = currentTDEE;
+
+            // Scroll to result
+            document.getElementById('result-card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Gestione Immagine
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedFileBase64 = e.target.result.split(',')[1]; // Remove data:image/...;base64,
+                const img = document.getElementById('image-preview');
+                img.src = e.target.result;
+                document.getElementById('preview-container').classList.remove('hidden');
+                document.getElementById('upload-placeholder').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Chiamata API Generica
+        async function callGemini(prompt, imageBase64 = null) {
+            const model = imageBase64 ? 'gemini-2.5-flash-preview-09-2025' : 'gemini-2.5-flash-preview-09-2025';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+            const parts = [{ text: prompt }];
+            if (imageBase64) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/jpeg",
+                        data: imageBase64
+                    }
+                });
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: parts }]
+                    })
+                });
+
+                if (!response.ok) throw new Error("Errore API");
+
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error(error);
+                return "Errore di connessione o chiave API non valida.";
+            }
+        }
+
+        // Analisi Immagine
+        async function analyzeImage() {
+            if (!selectedFileBase64) {
+                alert("Carica prima una foto!");
+                return;
+            }
+
+            const btnText = document.getElementById('analyze-text');
+            const loader = document.getElementById('analyze-loader');
+            const resultDiv = document.getElementById('image-result');
+
+            btnText.innerText = "Analisi in corso...";
+            loader.classList.remove('hidden');
+            resultDiv.classList.add('hidden');
+
+            const prompt = "Analizza questa immagine di cibo. Identifica il piatto e fornisci una stima approssimativa delle calorie totali e dei macronutrienti (Proteine, Carboidrati, Grassi). Rispondi in italiano in formato elenco puntato conciso. Sii amichevole.";
+
+            const result = await callGemini(prompt, selectedFileBase64);
+
+            resultDiv.innerHTML = formatAIResponse(result);
+            resultDiv.classList.remove('hidden');
+            
+            btnText.innerText = "Analizza con AI";
+            loader.classList.add('hidden');
+        }
+
+        // Generazione Piano
+        async function generatePlan() {
+            const cals = document.getElementById('plan-calories').value;
+            const goal = document.getElementById('diet-goal').value;
+
+            if (!cals) {
+                alert("Inserisci un target calorico o calcolalo prima!");
+                return;
+            }
+
+            const btnText = document.getElementById('plan-text');
+            const loader = document.getElementById('plan-loader');
+            const resultDiv = document.getElementById('plan-result');
+
+            btnText.innerText = "Generazione...";
+            loader.classList.remove('hidden');
+            resultDiv.classList.add('hidden');
+
+            const prompt = `Crea un piano alimentare giornaliero (Colazione, Pranzo, Cena, Spuntino) per un target di ${cals} kcal. Obiettivo: ${goal}. Stile: Mediterraneo. Includi i macro approssimativi per pasto. Rispondi in italiano usando la formattazione Markdown (grassetto, elenchi).`;
+
+            const result = await callGemini(prompt);
+
+            resultDiv.innerHTML = formatAIResponse(result);
+            resultDiv.classList.remove('hidden');
+
+            btnText.innerText = "Genera Piano";
+            loader.classList.add('hidden');
+        }
+
+        // Utility per formattare testo AI (Bold/Newlines)
+        function formatAIResponse(text) {
+            // Semplice converter da Markdown-like a HTML
+            let html = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                .replace(/\* (.*?)\n/g, '<li>$1</li>') // List items
+                .replace(/\n/g, '<br>'); // Newlines
+            
+            // Wrap lists
+            if (html.includes('<li>')) {
+                html = html.replace(/<li>/g, '<ul><li>').replace(/<\/li><br>/g, '</li></ul>');
+                html = html.replace(/<\/ul><ul>/g, ''); // Merge adjacent lists logic simplified
+            }
+            return html;
+        }
+
+        // iOS Fix per viewport height
+        function setVh() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        window.addEventListener('resize', setVh);
+        setVh();
+
+    </script>
+</body>
+</html>
+
